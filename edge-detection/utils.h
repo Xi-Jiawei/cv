@@ -91,8 +91,6 @@ char *filename(const char* path);
 char *fileext(const char* path);
 int match_ext(const char *ext, const char *extensions);
 
-int reduce_16bit_to_8bit(uint8_t **dst, int16_t *src, int size);
-
 int io_open(IOContext **s, const char *filename, int flags);
 int io_close(IOContext *s);
 int io_feof(IOContext *s);

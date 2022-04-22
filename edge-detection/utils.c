@@ -59,23 +59,6 @@ int match_ext(const char *ext, const char *extensions)
     return 1;
 }
 
-int reduce_16bit_to_8bit(uint8_t **dst, int16_t *src, int size)
-{
-    int i, j, ret;
-    uint8_t *p;
-    int16_t *q;
-
-    // 16bit转8bit
-    *dst = (uint8_t*)malloc(size);
-    p = *dst, q = src;
-    for (i = 0; i < size; ++i, p += 1, q += 1)
-        p[0] = CLIP255(q[0]);
-
-    fprintf(stderr, "Transform rgb to gray succeeded.\n");
-
-    return 0;
-}
-
 int io_open(IOContext **s, const char *filename, int flags)
 {
     int fd;
