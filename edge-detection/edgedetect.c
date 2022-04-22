@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "utils.h"
 #include "edgedetect.h"
 
@@ -119,6 +121,10 @@ int gaussian_blur(uint8_t **dst, uint8_t *src, int width, int height, int bitcou
 	winsize = (1 + (((int)ceil(3 * sigma)) * 2));//根据高斯模糊的3*sigma原则设计滤波器窗口大小
 	winradius = winsize / 2;
 	matrix = gaussian_matrix(winsize, sigma);
+
+    for (i = 0; i < winsize; ++i)
+        fprintf(stdout, "%.2f ", matrix[i]);
+    fprintf(stdout, "\n");
 
 	if (bitcount == 8) {
 		*dst = (uint8_t*)malloc(width * height);
@@ -315,19 +321,21 @@ int gradient_sobel(int16_t **dst, int16_t **dx, int16_t **dy, uint8_t *src, int 
     -1, 8, -1;
     -1, -1, -1]
 */
-int gradient_laplacian(int16_t **dst, uint8_t *src, int width, int height, int has_diagonals) {
+int gradient_laplacian(int16_t **dst, uint8_t *src, int width, int height, int winsize, int has_diagonals) {
 	int16_t gradx, grady, grad;
 	int i, j, pos, ret;
     int16_t *p;
     uint8_t *q;
+    int min = INT_MAX, max = INT_MIN, min_i, min_j, max_i, max_j;
 
 	*dst = (int16_t*)calloc(width * height, sizeof(int16_t));
 	p = *dst, q = src;
-	if (has_diagonals) {
-		for (j = 1; j < height - 1; ++j) {
-			for (i = 1; i < width - 1; ++i) {
-    			p[width * j + i] = src[width * j + i] * 8 -
-    				src[width * (j - 1) + i - 1] -
+    if (winsize == 3) {
+        if (has_diagonals) {
+            for (j = 1; j < height - 1; ++j) {
+                for (i = 1; i < width - 1; ++i) {
+                    p[width * j + i] = src[width * j + i] * 8 -
+                    src[width * (j - 1) + i - 1] -
                 	src[width * (j - 1) + i    ] -
                 	src[width * (j - 1) + i + 1] -
                 	src[width * j       + i - 1] -
@@ -335,21 +343,67 @@ int gradient_laplacian(int16_t **dst, uint8_t *src, int width, int height, int h
                 	src[width * (j + 1) + i - 1] -
                 	src[width * (j + 1) + i    ] -
                 	src[width * (j + 1) + i + 1];
-    		}
-    	}
-    } else {
-    	for (j = 1; j < height - 1; ++j) {
-    		for (i = 1; i < width - 1; ++i) {
-    			p[width * j + i] = src[width * j + i] * 4 -
+                }
+            }
+        } else {
+            for (j = 1; j < height - 1; ++j) {
+                for (i = 1; i < width - 1; ++i) {
+                    p[width * j + i] = src[width * j + i] * 4 -
     				src[width * j       + i - 1] -
                 	src[width * j       + i + 1] -
                 	src[width * (j - 1) + i    ] -
                 	src[width * (j + 1) + i    ];
-    		}
-    	}
+                }
+            }
+        }
+    } else if (winsize == 5) {
+        for (j = 2; j < height - 3; ++j) {
+            for (i = 2; i < width - 3; ++i) {
+                p[width * j + i] = src[width * j + i] * 16 -
+                    src[width * j       + i - 1] * 2 -
+                    src[width * j       + i + 1] * 2 -
+                    src[width * (j - 1) + i    ] * 2 -
+                    src[width * (j + 1) + i    ] * 2 -
+                    src[width * (j - 2) + i    ] -
+                    src[width * (j - 1) + i - 1] -
+                    src[width * (j - 1) + i + 1] -
+                    src[width * j       + i - 2] -
+                    src[width * j       + i + 2] -
+                    src[width * (j + 1) + i - 1] -
+                    src[width * (j + 1) + i + 1] -
+                    src[width * (j + 2) + i    ];
+            }
+        }
     }
 
 	return 0;
+}
+
+int convert_scale_abs(uint8_t **dst, int16_t *src, int size)
+{
+    int min = INT_MAX, max = INT_MIN, range;
+    int i, j, ret;
+    uint8_t *p;
+    int16_t *q;
+
+    for (i = 0, q = src; i < size; ++i, q += 1) {
+        if (*q < min) min = *q;
+        if (*q > max) max = *q;
+    }
+    range = max - min;
+    fprintf(stdout, "[edgedetect] min: %d, max: %d, range: %d\n", min, max, range);
+
+    // 16bit转8bit
+    *dst = (uint8_t*)malloc(size);
+    p = *dst, q = src;
+    for (i = 0; i < size; ++i, p += 1, q += 1) {
+        //fprintf(stdout, "[edgedetect] src[%d].dev: %d\n", i, q[0] - min);
+        p[0] = CLIP255(((q[0] - min) << 8) / range);
+    }
+
+    fprintf(stdout, "Transform rgb to gray succeeded.\n");
+
+    return 0;
 }
 
 /** \ingroup edgedetect
@@ -444,7 +498,7 @@ int detect_edge(uint8_t **dst, uint8_t *src, int width, int height) {
 	//		break;
 	//	}
 	//}
-	threshold_sum = (size - histogram[0] - histogram[1] - histogram[2]) * 0.3;
+	threshold_sum = (size - histogram[0] - histogram[1] - histogram[2] - histogram[3]) * 0.3;
 	sum = 0;
 	for (i = 255; i >= 0; --i) {
 		sum += histogram[i];
@@ -494,59 +548,6 @@ int detect_edge(uint8_t **dst, uint8_t *src, int width, int height) {
     			src[pos + width] > high_threshold || 
     			src[pos + width + 1] > high_threshold)
     			p[pos] = src[pos]; // 当介于低阈值和高阈值之间，考虑其是否连接强边缘点：如果周边8个点有1个强边缘点，则保留；否则抑制
-    	}
-    }
-
-	return 0;
-}
-
-/** \ingroup edgedetect
-    \brief Detect sharp edges
-    \param dst Output edge image
-    \param src Input gradiant map
-    \param width Input gradiant map width
-    \param height Input gradiant map height
-    \returns 1 if an error occurred, 0 else
-
-    This function detects sharp edges by the processing gradiants map with high threshold suppression algorithm.
-    此函数对梯度图进行阈值抑制来过滤掉虚焦边缘，生成焦点处边缘。
-*/
-int detect_sharp_edge(uint8_t **dst, uint8_t *src, int width, int height) {
-	int size;
-	int histogram[256], sum, threshold_sum, cnt, flag, low_threshold, high_threshold;
-	int i, j, pos, ret;
-    uint8_t *p, *q;
-
-    size = width * height;
-	*dst = (uint8_t*)calloc(size, sizeof(uint8_t));
-
-	// 统计梯度直方图，并计算高低阈值
-	memset(histogram, 0, sizeof(int) * 256);
-	for (i = 0, p = src; i < size; ++i)
-		histogram[*p++]++;
-	sum = 0;
-	flag = 0;
-	for (i = 255; i >= 0; --i) {
-		cnt = !!(histogram[i]);
-		if (!flag && cnt) {
-			flag = 1;
-			if (i < 24) {
-				high_threshold = i / 3;
-			}
-		}
-		sum += cnt;
-		if (sum > 24) {
-			high_threshold = i;
-			break;
-		}
-	}
-	fprintf(stdout, "[edgedetect] high_threshold: %d\n", high_threshold);
-
-	// 高阈值加强
-	for (j = 1, p = *dst; j < height - 1; ++j) {
-    	for (i = 1; i < width - 1; ++i) {
-    		pos = width * j + i;
-    		if (src[pos] > high_threshold) p[pos] = 255;
     	}
     }
 
