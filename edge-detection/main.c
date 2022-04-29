@@ -11,9 +11,9 @@ int edge_canny(char *file) {
     int i, ret;
     char outfile[255], *fname, *fext;
 
-    fname = filename(file);
-    fext = fileext(file);
-    if (match_ext(fext, "tiff") || match_ext(fext, "tif") || match_ext(fext, "dng") || match_ext(fext, "DNG")) {
+    fname = get_file_name(file);
+    fext = get_file_ext(file);
+    if (!strcmp(fext, "tiff") || !strcmp(fext, "tif")) {
         int w1, h1, bpp1, s1, phi1;
         int width, height, bitcount, samples_per_pixel, photo_interp;
         extract_tiff_data(&src, &width, &height, &bitcount, &samples_per_pixel, &photo_interp, file);
@@ -57,7 +57,7 @@ int edge_canny(char *file) {
             c->image_data = gray_blur_gradiant_nms_edge;
             write_tiff(c, outfile);
         }
-    } else if (match_ext(fext, "bmp")) {
+    } else if (!strcmp(fext, "bmp")) {
         int width, height, bitcount;
         bmp_read(&src, &width, &height, &bitcount, file);
         if (bitcount == 24) {
@@ -109,8 +109,8 @@ int edge_laplacian(char *file) {
     int i, ret;
     char outfile[255], *fname, *fext;
 
-    fname = filename(file);
-    fext = fileext(file);
+    fname = get_file_name(file);
+    fext = get_file_ext(file);
     if (match_ext(fext, "tiff") || match_ext(fext, "tif") || match_ext(fext, "dng") || match_ext(fext, "DNG")) {
         int w1, h1, bpp1, s1, phi1;
         int width, height, bitcount, samples_per_pixel, photo_interp;

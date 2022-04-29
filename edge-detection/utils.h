@@ -87,9 +87,9 @@ typedef struct IOContext {
     unsigned char *buf_end;
 } IOContext;
 
-char *filename(const char* path);
-char *fileext(const char* path);
-int match_ext(const char *ext, const char *extensions);
+char *get_file_name(const char* filepath);
+char *get_file_ext(const char* filepath);
+int match_ext(const char *file, const char *ext);
 
 int io_open(IOContext **s, const char *filename, int flags);
 int io_close(IOContext *s);

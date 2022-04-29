@@ -8,7 +8,7 @@
 
 #include "utils.h"
 
-#define VALUE_SIZE 4
+#define TIFF_VALUE_SIZE 4
 
 #define TIFFTAG_NEWSUBFILETYPE      0xfe
 #define TIFFTAG_IMAGEWIDTH          0x100
@@ -26,6 +26,8 @@
 #define TIFFTAG_CFAREPEATPATTERNDIM 0x828d
 #define TIFFTAG_CFAPATTERN          0x828e
 
+#define TIFF_MAX_NUM_SUBIFD 16
+
 typedef enum {
     TIFF_DATA_TYPE_NONE            = 0, /*!< Undefined or not yet set */
     TIFF_DATA_TYPE_BYTE            = 1, /*!< Byte */
@@ -40,36 +42,24 @@ typedef enum {
     TIFF_DATA_TYPE_SIGNED_RATIONAL = 10, /*!< Tow SLONGs: the first represents the numerator of a fraction; the second, the denominator. */
     TIFF_DATA_TYPE_FLOAT           = 11, /*!< Float */
     TIFF_DATA_TYPE_DOUBLE          = 12, /*!< Double */
-} DataType;
+} TIFFDataType;
 
 static size_t typesize_table[] = { 1, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8, 4 };
 
-typedef struct DEntry {
-    uint16_t tag;   // 标志
-    uint16_t type;  // 值类型
-    uint32_t count; // 值的个数
-    uint32_t value; // 值或者值的偏移
-} __attribute__((packed)) DEntry;
+typedef struct TIFFDirEntry {
+    uint16_t tag;   /* data tag */
+    uint16_t type;  /* data type */
+    uint32_t count; /* number of items; length in spec */
+    uint32_t value; /* either offset or the data itself if fits */
+} __attribute__((packed)) TIFFDirEntry;
 
-typedef struct Entry {
-    uint16_t tag;   // 标志
-    uint16_t type;  // 值类型
-    uint32_t count; // 值的个数
-    int is_offset;  // 是否是值的偏移
-    uint32_t value; // 值或者值的偏移
-    uint8_t *data;  // 偏移的值数据
-} __attribute__((packed)) Entry;
-
-typedef struct SubIfd {
-    void *ptr;       // pointer of TIFFContext type
-    uint32_t offset; // 在文件中的偏移
-} SubIfd;
+typedef struct SubIFD {
+    void *ctx_ptr; // pointer of TIFFContext type
+    uint32_t offset; // subifd offset
+} SubIFD;
 
 typedef struct TIFFContext {
     //const TIFFClass *class; ///< class for private options
-    SubIfd *subifds;
-    int subifds_num;
-
     uint8_t *image_data;
 
     uint32_t new_subfile_type;
@@ -151,22 +141,25 @@ typedef struct TIFFContext {
     // DNG-specific tags
     uint8_t dng_version[4];
     uint8_t *unique_camera_model;
-    int linearization_table_num;
+    int num_linearization_table;
     uint16_t *linearization_table;
-    int white_level_num;
+    int num_white_level;
     uint32_t *white_level;
-    int color_matrix1_num;
+    int num_color_matrix1;
     int32_t color_matrix1[9][2];
     uint64_t default_crop_origin[2];
     uint64_t default_crop_size[2];
     uint16_t calibration_illuminant1;
-    int as_shot_neutral_num;
+    int num_as_shot_neutral;
     uint64_t *as_shot_neutral;
+
+    SubIFD *subifd;
+    int num_subifd;
 } TIFFContext;
 
 typedef struct TIFFParseTableEntry {
     uint16_t tag;
-    int (*parse)(TIFFContext *ctx, IOContext *s, DEntry *entry);
+    int (*parse)(TIFFContext *ctx, IOContext *s, TIFFDirEntry *entry);
 } TIFFParseTableEntry;
 
 int tiff_read_ifd(TIFFContext *c, IOContext *s, uint32_t offset);
@@ -186,5 +179,14 @@ int write_tiff_tag(IOContext *s, uint16_t tag, uint16_t type, uint32_t count, ui
 int write_tiff(TIFFContext *c, char *filename);
 int init_dng_ctx(TIFFContext **s, uint8_t *bayer, int width, int height);
 int write_dng(TIFFContext *c, char *filename);
+
+typedef struct TIFFEntry {
+    uint16_t tag;      /* data tag */
+    uint16_t type;     /* data type */
+    uint32_t count;    /* number of items; length in spec */
+    int is_offset;     /* 1 if value is offset */
+    uint32_t value;    /* either offset or the data itself if fits */
+    uint8_t *data;     /* the data if value is offset, or null if value is the data itself */
+} TIFFEntry;
 
 #endif /* __TIFF_H */

@@ -1,45 +1,45 @@
 #include "tiff.h"
 
-int tiff_read_new_subfile_type(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_new_subfile_type(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->new_subfile_type = entry->value;
     fprintf(stderr, "new_subfile_type: %d\n", c->new_subfile_type);
     return 0;
 }
 
-int tiff_read_image_width(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_image_width(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->image_width = entry->value;
     fprintf(stderr, "image_width: %d\n", c->image_width);
     return 0;
 }
 
-int tiff_read_image_length(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_image_length(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->image_length = entry->value;
     fprintf(stdout, "image_length: %d\n", c->image_length);
     return 0;
 }
 
-int tiff_read_photo_interp(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_photo_interp(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->photo_interp = entry->value;
     fprintf(stdout, "photo_interp: %d\n", c->photo_interp);
     return 0;
 }
 
-int tiff_read_samples_per_pixel(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_samples_per_pixel(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->samples_per_pixel = entry->value;
     fprintf(stdout, "samples_per_pixel: %d\n", c->samples_per_pixel);
     return 0;
 }
 
-int tiff_read_bits_per_sample(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_bits_per_sample(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     if (c->samples_per_pixel) assert(c->samples_per_pixel == entry->count);
     else c->samples_per_pixel = entry->count;
     assert(entry->type == TIFF_DATA_TYPE_SHORT && entry->count != 0);
     size = entry->count * typesize_table[entry->type];
     c->bits_per_sample = (uint16_t*)malloc(size);
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         memcpy(c->bits_per_sample, &entry->value, size);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         io_read(s, (void*)c->bits_per_sample, size);
     }
@@ -52,20 +52,20 @@ int tiff_read_bits_per_sample(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_compression(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_compression(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->compression = entry->value;
     fprintf(stdout, "compression.tag: %d, compression.type: %d, compression: %d\n", entry->tag, entry->type, c->compression);
     return 0;
 }
 
-int tiff_read_model(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_model(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     assert(entry->type == TIFF_DATA_TYPE_ASCII && entry->count != 0);
     size = entry->count;
     c->model = (char*)malloc(entry->count);
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         memcpy(c->model, &entry->value, size);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         io_read(s, (void*)c->model, size);
     }
@@ -73,19 +73,19 @@ int tiff_read_model(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_orientation(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_orientation(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->orientation = entry->value;
     fprintf(stdout, "orientation.tag: %d, orientation.type: %d, orientation: %d\n", entry->tag, entry->type, c->orientation);
     return 0;
 }
 
-int tiff_read_planar_configuration(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_planar_configuration(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->planar_configuration = entry->value;
     fprintf(stdout, "planar_configuration.tag: %d, planar_configuration.type: %d, planar_configuration: %d\n", entry->tag, entry->type, c->planar_configuration);
     return 0;
 }
 
-int tiff_read_x_resolution(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_x_resolution(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     io_seek(s, entry->value, SEEK_SET);
     io_read(s, (void*)&(c->x_resolution[0]), sizeof(uint32_t));
     io_read(s, (void*)&(c->x_resolution[1]), sizeof(uint32_t));
@@ -93,7 +93,7 @@ int tiff_read_x_resolution(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_y_resolution(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_y_resolution(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     io_seek(s, entry->value, SEEK_SET);
     io_read(s, (void*)&(c->y_resolution[0]), sizeof(uint32_t));
     io_read(s, (void*)&(c->y_resolution[1]), sizeof(uint32_t));
@@ -101,22 +101,22 @@ int tiff_read_y_resolution(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_resolution_unit(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_resolution_unit(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->resolution_unit = entry->value;
     fprintf(stdout, "resolution_unit.tag: %d, resolution_unit.type: %d, resolution_unit: %d\n", entry->tag, entry->type, c->resolution_unit);
     return 0;
 }
 
-int tiff_read_strip_offsets(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_strip_offsets(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     if (c->strips_per_image) assert(c->strips_per_image == entry->count);
     else c->strips_per_image = entry->count;
     assert(entry->count != 0);
     size = entry->count * typesize_table[entry->type];
     c->strip_offsets = (uint32_t*)malloc(size);
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         memcpy(c->strip_offsets, &entry->value, size);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         io_read(s, (void*)c->strip_offsets, size);
     }
@@ -126,7 +126,7 @@ int tiff_read_strip_offsets(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_rows_per_strip(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_rows_per_strip(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->rows_per_strip = entry->value;
     int strips_per_image = (c->image_length + c->rows_per_strip - 1) / c->rows_per_strip;
     if (c->strips_per_image) assert(strips_per_image == c->strips_per_image);
@@ -135,14 +135,14 @@ int tiff_read_rows_per_strip(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_strip_byte_counts(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_strip_byte_counts(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     assert(entry->count != 0);
     size = entry->count * typesize_table[entry->type];
     c->strip_byte_counts = (uint32_t*)malloc(size);
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         memcpy(c->strip_byte_counts, &entry->value, size);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         io_read(s, (void*)c->strip_byte_counts, size);
     }
@@ -155,19 +155,19 @@ int tiff_read_strip_byte_counts(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_tile_width(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_tile_width(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->tile_width = entry->value;
     fprintf(stdout, "tile_width.tag: %d, tile_width.type: %d, tile_width: %d\n", entry->tag, entry->type, c->tile_width);
     return 0;
 }
 
-int tiff_read_tile_length(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_tile_length(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->tile_length = entry->value;
     fprintf(stdout, "tile_length.tag: %d, tile_length.type: %d, tile_length: %d\n", entry->tag, entry->type, c->tile_length);
     return 0;
 }
 
-int tiff_read_tile_offsets(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_tile_offsets(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     if (c->image_width && c->image_length && c->tile_width && c->tile_length) {
         int tile_across, tile_down;
@@ -181,9 +181,9 @@ int tiff_read_tile_offsets(TIFFContext *c, IOContext *s, DEntry *entry) {
     assert(entry->type == TIFF_DATA_TYPE_LONG && entry->count != 0);
     size = entry->count * typesize_table[entry->type];
     c->tile_offsets = (uint32_t*)malloc(entry->count * sizeof(uint32_t));
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         c->tile_offsets[0] = entry->value;
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         for (int i = 0; i < entry->count; ++i) {
             ret = io_read(s, (void*)&(c->tile_offsets[i]), sizeof(uint32_t));
@@ -196,7 +196,7 @@ int tiff_read_tile_offsets(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_cfa_repeat_pattern_dim(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_cfa_repeat_pattern_dim(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     short *arr = (short*)&entry->value;
     c->cfa_repeat_pattern_dim[0] = arr[0];
     c->cfa_repeat_pattern_dim[1] = arr[1];
@@ -206,14 +206,14 @@ int tiff_read_cfa_repeat_pattern_dim(TIFFContext *c, IOContext *s, DEntry *entry
     return 0;
 }
 
-int tiff_read_cfa_pattern(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_cfa_pattern(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int ret;
     if (c->cfa_repeat_pattern_dim[0]) assert(c->cfa_repeat_pattern_dim[0] * c->cfa_repeat_pattern_dim[1] == entry->count);
     assert(entry->type == TIFF_DATA_TYPE_BYTE && entry->count != 0);
     c->cfa_pattern = (uint8_t*)malloc(entry->count);
-    if (entry->count <= VALUE_SIZE) {
+    if (entry->count <= TIFF_VALUE_SIZE) {
         memcpy(c->cfa_pattern, &entry->value, entry->count);
-    } else if (entry->count > VALUE_SIZE) {
+    } else if (entry->count > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         io_read(s, (void*)c->cfa_pattern, entry->count);
     }
@@ -223,31 +223,32 @@ int tiff_read_cfa_pattern(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_subifds(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_subifds(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int ret;
     assert(entry->count != 0);
-    c->subifds = (SubIfd *)malloc(entry->count * sizeof(SubIfd));
-    c->subifds_num = 0;
+    c->subifd = (SubIFD *)calloc(entry->count, sizeof(SubIFD));
+    c->num_subifd = 0;
     if (entry->count == 1) {
-        c->subifds[0].offset = entry->value;
-        c->subifds[0].ptr = malloc(sizeof(TIFFContext));
-        c->subifds_num = 1;
+        c->subifd[0].offset = entry->value;
+        c->subifd[0].ctx_ptr = malloc(sizeof(TIFFContext));
+        c->num_subifd = 1;
     } else if (entry->count > 1) {
         io_seek(s, entry->value, SEEK_SET);
-        for (int i = 0; i < entry->count; ++i) {
-            ret = io_read(s, (void*)&(c->subifds[i].offset), sizeof(uint32_t));
+        int count = MIN(entry->count, TIFF_MAX_NUM_SUBIFD);
+        for (int i = 0; i < count; ++i) {
+            ret = io_read(s, (void*)&(c->subifd[i].offset), sizeof(uint32_t));
             if (ret < 0) return ret;
-            c->subifds[i].ptr = malloc(sizeof(TIFFContext));
-            c->subifds_num++;
+            c->subifd[i].ctx_ptr = malloc(sizeof(TIFFContext));
+            c->num_subifd++;
         }
     }
-    fprintf(stdout, "subifds.tag: %d, subifds.type: %d\n", entry->tag, entry->type);
+    fprintf(stdout, "subifd.tag: %d, subifd.type: %d\n", entry->tag, entry->type);
     for (int i = 0; i < entry->count; ++i)
-        fprintf(stdout, "subifds[%d]: %d\n", i, c->subifds[i].offset);
+        fprintf(stdout, "subifd[%d]: %d\n", i, c->subifd[i].offset);
     return 0;
 }
 
-int tiff_read_cfa_dng_version(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_cfa_dng_version(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     uint8_t *arr = (uint8_t*)&entry->value;
     c->dng_version[0] = arr[0];
     c->dng_version[1] = arr[1];
@@ -258,12 +259,12 @@ int tiff_read_cfa_dng_version(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_unique_camera_model(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_unique_camera_model(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     assert(entry->count != 0);
     c->unique_camera_model = (uint8_t*)malloc(entry->count);
-    if (entry->count <= VALUE_SIZE) {
+    if (entry->count <= TIFF_VALUE_SIZE) {
         memcpy(c->unique_camera_model, &entry->value, entry->count);
-    } else if (entry->count > VALUE_SIZE) {
+    } else if (entry->count > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         io_read(s, (void*)c->unique_camera_model, entry->count);
     }
@@ -271,15 +272,15 @@ int tiff_read_unique_camera_model(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_linearization_table(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_linearization_table(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     assert(entry->type == TIFF_DATA_TYPE_SHORT && entry->count != 0);
-    c->linearization_table_num = entry->count;
+    c->num_linearization_table = entry->count;
     size = entry->count * typesize_table[entry->type];
     c->linearization_table = (uint16_t*)malloc(size);
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         memcpy(c->linearization_table, &entry->value, size);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         io_read(s, (void*)c->linearization_table, size);
     }
@@ -289,15 +290,15 @@ int tiff_read_linearization_table(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_default_crop_origin(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_default_crop_origin(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     assert(entry->count == 2);
     size = entry->count * typesize_table[entry->type];
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         uint8_t *p = (uint8_t*)&entry->value;
         for (int i = 0; i < entry->count; ++i)
             memcpy((void*)&c->default_crop_origin[i], p + i * typesize_table[entry->type], typesize_table[entry->type]);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         for (int i = 0; i < entry->count; ++i)
             io_read(s, (void*)&c->default_crop_origin[i], typesize_table[entry->type]);
@@ -308,15 +309,15 @@ int tiff_read_default_crop_origin(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_default_crop_size(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_default_crop_size(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     assert(entry->count == 2);
     size = entry->count * typesize_table[entry->type];
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         uint8_t *p = (uint8_t*)&entry->value;
         for (int i = 0; i < entry->count; ++i)
             memcpy((void*)&c->default_crop_size[i], p + i * typesize_table[entry->type], typesize_table[entry->type]);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         for (int i = 0; i < entry->count; ++i)
             io_read(s, (void*)&c->default_crop_size[i], typesize_table[entry->type]);
@@ -327,10 +328,10 @@ int tiff_read_default_crop_size(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_color_matrix1(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_color_matrix1(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     assert(entry->type == TIFF_DATA_TYPE_SIGNED_RATIONAL && entry->count != 0 && entry->count <= 9);
-    c->color_matrix1_num = entry->count;
+    c->num_color_matrix1 = entry->count;
     size = entry->count * typesize_table[entry->type];
     io_seek(s, entry->value, SEEK_SET);
     io_read(s, (void*)c->color_matrix1, size);
@@ -340,18 +341,18 @@ int tiff_read_color_matrix1(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_white_level(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_white_level(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     if (c->samples_per_pixel) assert(entry->count == c->samples_per_pixel);
     assert(entry->count != 0);
-    c->white_level_num = entry->count;
+    c->num_white_level = entry->count;
     size = entry->count * typesize_table[entry->type];
     c->white_level = (uint32_t*)malloc(entry->count * sizeof(uint32_t*));
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         uint8_t *p = (uint8_t*)&entry->value;
         for (int i = 0; i < entry->count; ++i)
             memcpy((void*)&c->white_level[i], p + i * typesize_table[entry->type], typesize_table[entry->type]);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         for (int i = 0; i < entry->count; ++i)
             io_read(s, (void*)&c->white_level[i], typesize_table[entry->type]);
@@ -362,23 +363,23 @@ int tiff_read_white_level(TIFFContext *c, IOContext *s, DEntry *entry) {
     return 0;
 }
 
-int tiff_read_calibration_illuminant1(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_calibration_illuminant1(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     c->calibration_illuminant1 = entry->value;
     fprintf(stdout, "calibration_illuminant1.tag: %d, calibration_illuminant1.type: %d, calibration_illuminant1: %d\n", entry->tag, entry->type, c->calibration_illuminant1);
     return 0;
 }
 
-int tiff_read_as_shot_neutral(TIFFContext *c, IOContext *s, DEntry *entry) {
+int tiff_read_as_shot_neutral(TIFFContext *c, IOContext *s, TIFFDirEntry *entry) {
     int size, ret;
     assert(entry->count != 0);
-    c->as_shot_neutral_num = entry->count;
+    c->num_as_shot_neutral = entry->count;
     size = entry->count * typesize_table[entry->type];
     c->as_shot_neutral = (uint64_t*)malloc(entry->count * sizeof(uint64_t*));
-    if (size <= VALUE_SIZE) {
+    if (size <= TIFF_VALUE_SIZE) {
         uint8_t *p = (uint8_t*)&entry->value;
         for (int i = 0; i < entry->count; ++i)
             memcpy((void*)&c->as_shot_neutral[i], p + i * typesize_table[entry->type], typesize_table[entry->type]);
-    } else if (size > VALUE_SIZE) {
+    } else if (size > TIFF_VALUE_SIZE) {
         io_seek(s, entry->value, SEEK_SET);
         for (int i = 0; i < entry->count; ++i)
             io_read(s, (void*)&c->as_shot_neutral[i], typesize_table[entry->type]);
@@ -427,20 +428,20 @@ static const TIFFParseTableEntry tiff_default_parse_table[] = {
 int tiff_read_ifd(TIFFContext *c, IOContext *s, uint32_t offset) {
     uint16_t num;
     int64_t pos;
-    DEntry entry;
+    TIFFDirEntry entry;
     int size, i, idx;
     int ret = 0;
 
     io_seek(s, offset, SEEK_SET);
     io_read(s, &num, 2);
     for (idx = 0; idx < num; ++idx) {
-        if ((size = io_read(s, &entry, sizeof(DEntry))) != sizeof(DEntry)) {
+        if ((size = io_read(s, &entry, sizeof(TIFFDirEntry))) != sizeof(TIFFDirEntry)) {
             fprintf(stderr, "Error: failed to read entry at portion %ld\n", io_tell(s));
             return -1;
         }
         fprintf(stdout, "entries[%d].tag: %04x\n", idx, entry.tag);
 
-        int (*parse)(TIFFContext*, IOContext*, DEntry*) = NULL;
+        int (*parse)(TIFFContext*, IOContext*, TIFFDirEntry*) = NULL;
         for (i = 0; tiff_default_parse_table[i].tag; i++)
             if (tiff_default_parse_table[i].tag == entry.tag) {
                 parse = tiff_default_parse_table[i].parse;
@@ -471,12 +472,12 @@ int tiff_read_ifd(TIFFContext *c, IOContext *s, uint32_t offset) {
         }
         io_seek(s, pos, SEEK_SET);
     }
-    if (c->subifds) {
+    if (c->num_subifd) {
         pos = io_tell(s);
-        for (i = 0; i < c->subifds_num; ++i) {
-            ret = tiff_read_ifd((TIFFContext *)(c->subifds[i].ptr), s, c->subifds[i].offset);
+        for (i = 0; i < c->num_subifd; ++i) {
+            ret = tiff_read_ifd((TIFFContext *)(c->subifd[i].ctx_ptr), s, c->subifd[i].offset);
             if (ret < 0) {
-                fprintf(stderr, "Error: failed to read ifd at portion %d\n", c->subifds[i].offset);
+                fprintf(stderr, "Error: failed to read ifd at portion %d\n", c->subifd[i].offset);
                 return ret;
             }
         }
@@ -528,8 +529,8 @@ int extract_tiff_data(uint8_t **data, int *width, int *height, int *bitcount, in
         st.pop();
         if (ctx->new_subfile_type == 0)
             break;
-        for (int i = 0; i < c->subifds_num; ++i)
-            st.push((TIFFContext*)(c->subifds[i].ptr));
+        for (int i = 0; i < c->num_subifd; ++i)
+            st.push((TIFFContext*)(c->subifd[i].ctx_ptr));
     }*/
     ctx = c;
 
@@ -553,7 +554,7 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     uint32_t offset = 8, pos = 10;
     uint16_t number = 17;
     IOContext *s;
-    DEntry entry;
+    TIFFDirEntry entry;
 
     if ((ret = io_open(&s, filename, O_WRONLY | O_CREAT | O_TRUNC)) == -1) {
         fprintf(stderr, "Error: failed to open file \"%s\"\n", filename);
@@ -568,42 +569,42 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     // entries number
     io_write(s, &number, 2);
 
-    offset = 8 + 2 + number * sizeof(DEntry);
+    offset = 8 + 2 + number * sizeof(TIFFDirEntry);
 
     // newsubfile
     entry.tag   = 0xfe;
     entry.type  = TIFF_DATA_TYPE_LONG;
     entry.count = 1;
     entry.value = 0; // main image: 0; thumbnail image: not 0
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
 
     // width
     entry.tag   = 0x100;
     entry.type  = TIFF_DATA_TYPE_LONG;
     entry.count = 1;
     entry.value = width;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
 
     // height
     entry.tag   = 0x101;
     entry.type  = TIFF_DATA_TYPE_LONG;
     entry.count = 1;
     entry.value = height;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // photo_interp
     entry.tag   = 0x106;
     entry.type  = TIFF_DATA_TYPE_LONG;
     entry.count = 1;
     entry.value = 2; // rgb
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // samples_per_pixel
     entry.tag   = 0x115;
     entry.type  = TIFF_DATA_TYPE_SHORT;
     entry.count = 1;
     entry.value = SAMPLES_PER_PIXEL;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // bits_per_sample
     int bitcount = BITS_PER_SAMPLE * SAMPLES_PER_PIXEL;
@@ -612,7 +613,7 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     entry.type  = TIFF_DATA_TYPE_SHORT;
     entry.count = SAMPLES_PER_PIXEL;
     entry.value = offset;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     pos = io_tell(s);
     io_seek(s, offset, SEEK_SET);
     uint16_t *bits_per_sample = (uint16_t*)malloc(SAMPLES_PER_PIXEL * sizeof(uint16_t));
@@ -626,28 +627,28 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     entry.type  = TIFF_DATA_TYPE_SHORT;
     entry.count = 1;
     entry.value = 1;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // orientation
     entry.tag   = 0x112;
     entry.type  = TIFF_DATA_TYPE_SHORT;
     entry.count = 1;
     entry.value = 1;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // planar_configuration
     entry.tag   = 0x11c;
     entry.type  = TIFF_DATA_TYPE_SHORT;
     entry.count = 1;
     entry.value = 1;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // x_resolution
     entry.tag   = 0x11a;
     entry.type  = TIFF_DATA_TYPE_RATIONAL;
     entry.count = 1;
     entry.value = offset;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     pos = io_tell(s);
     io_seek(s, offset, SEEK_SET);
     uint32_t x_resolution[2] = { 72, 1 };
@@ -660,7 +661,7 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     entry.type  = TIFF_DATA_TYPE_RATIONAL;
     entry.count = 1;
     entry.value = offset;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     pos = io_tell(s);
     io_seek(s, offset, SEEK_SET);
     uint32_t y_resolution[2] = { 72, 1 };
@@ -673,14 +674,14 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     entry.type  = TIFF_DATA_TYPE_SHORT;
     entry.count = 1;
     entry.value = 2;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // rows_per_strip
     entry.tag   = 0x116;
     entry.type  = TIFF_DATA_TYPE_LONG;
     entry.count = 1;
     entry.value = ROWS_PER_STRIP;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // strip_byte_counts
     int num_strips = (height + ROWS_PER_STRIP - 1) / ROWS_PER_STRIP;
@@ -689,7 +690,7 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     entry.type  = TIFF_DATA_TYPE_LONG;
     entry.count = num_strips;
     entry.value = offset;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     pos = io_tell(s);
     io_seek(s, offset, SEEK_SET);
     uint32_t *strip_byte_counts = (uint32_t*)malloc(num_strips * sizeof(uint32_t));
@@ -708,7 +709,7 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     entry.type  = TIFF_DATA_TYPE_LONG;
     entry.count = num_strips;
     entry.value = offset;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     pos = io_tell(s);
     io_seek(s, offset, SEEK_SET);
     uint32_t strip_offsets[4];
@@ -724,28 +725,28 @@ int write_tiff_default(char *filename, uint8_t *rgb, int width, int height)
     entry.type  = TIFF_DATA_TYPE_SHORT;
     entry.count = 2;
     entry.value = 0x00020002;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // cfa_pattern
     entry.tag   = 0x828e;
     entry.type  = TIFF_DATA_TYPE_BYTE;
     entry.count = 4;
     entry.value = 0x01000201; // gbrg
-    io_write(s, &entry, sizeof(DEntry));*/
+    io_write(s, &entry, sizeof(TIFFDirEntry));*/
 
     // dng_version
     entry.tag   = 0xc612;
     entry.type  = TIFF_DATA_TYPE_BYTE;
     entry.count = 4;
     entry.value = 0x101;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     
     // unique_camera_model
     entry.tag   = 0xc614;
     entry.type  = TIFF_DATA_TYPE_BYTE;
     entry.count = 8;
     entry.value = offset;
-    io_write(s, &entry, sizeof(DEntry));
+    io_write(s, &entry, sizeof(TIFFDirEntry));
     pos = io_tell(s);
     io_seek(s, offset, SEEK_SET);
     const char*unique_camera_model = "VEEVEEV";
@@ -825,12 +826,12 @@ int init_tiff_ctx(TIFFContext **s, uint8_t *data, int width, int height, int bit
 int write_tiff_tag(IOContext *s, uint16_t tag, uint16_t type, uint32_t count, uint8_t *values, uint32_t *offset)
 {
     int size, pos;
-    DEntry entry = { tag, type, count, 0 };
+    TIFFDirEntry entry = { tag, type, count, 0 };
 
     size = count * typesize_table[type];
     if (size > 4) {
         entry.value = *offset;
-        io_write(s, &entry, sizeof(DEntry));
+        io_write(s, &entry, sizeof(TIFFDirEntry));
         pos = io_tell(s);
         io_seek(s, *offset, SEEK_SET);
         io_write(s, values, size);
@@ -838,7 +839,7 @@ int write_tiff_tag(IOContext *s, uint16_t tag, uint16_t type, uint32_t count, ui
         *offset += size;
     } else {
         memcpy(&entry.value, values, size); // entry.value = *((uint32_t*)values);
-        io_write(s, &entry, sizeof(DEntry));
+        io_write(s, &entry, sizeof(TIFFDirEntry));
     }
 }
 int write_tiff(TIFFContext *c, char *filename)
@@ -869,7 +870,7 @@ int write_tiff(TIFFContext *c, char *filename)
     number = 16;
     io_write(s, &number, 2);
 
-    offset = 8 + 2 + number * sizeof(DEntry) + 4;
+    offset = 8 + 2 + number * sizeof(TIFFDirEntry) + 4;
 
     write_tiff_tag(s, 0xfe, TIFF_DATA_TYPE_LONG, 1, (uint8_t*)&c->new_subfile_type, &offset);
     write_tiff_tag(s, 0x100, TIFF_DATA_TYPE_LONG, 1, (uint8_t*)&c->image_width, &offset);
@@ -938,9 +939,9 @@ int init_dng_ctx(TIFFContext **s, uint8_t *bayer, int width, int height)
     c->dng_version[0] = 1, c->dng_version[1] = 1;
     c->unique_camera_model = (uint8_t*)malloc(8);
     memcpy(c->unique_camera_model, "VEEVEEV", 8);
-    c->linearization_table_num = 256;
-    c->linearization_table = (uint16_t*)malloc(c->linearization_table_num * sizeof(uint16_t));
-    for (i = 0; i < c->linearization_table_num; ++i) c->linearization_table[i] = i;
+    c->num_linearization_table = 256;
+    c->linearization_table = (uint16_t*)malloc(c->num_linearization_table * sizeof(uint16_t));
+    for (i = 0; i < c->num_linearization_table; ++i) c->linearization_table[i] = i;
     c->color_matrix1[0][0] = 19456; c->color_matrix1[0][1] = 10000;
     c->color_matrix1[4][0] = 12288; c->color_matrix1[4][1] = 10000;
     c->color_matrix1[8][0] = 12288; c->color_matrix1[8][1] = 10000;
@@ -976,7 +977,7 @@ int write_dng(TIFFContext *c, char *filename)
     number = 24;
     io_write(s, &number, 2);
 
-    offset = 8 + 2 + number * sizeof(DEntry) + 4;
+    offset = 8 + 2 + number * sizeof(TIFFDirEntry) + 4;
 
     write_tiff_tag(s, 0xfe, TIFF_DATA_TYPE_LONG, 1, (uint8_t*)&c->new_subfile_type, &offset);
     write_tiff_tag(s, 0x100, TIFF_DATA_TYPE_LONG, 1, (uint8_t*)&c->image_width, &offset);
