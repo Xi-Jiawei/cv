@@ -1,13 +1,13 @@
 #include "utils.h"
 
-char *filename(const char* path)
+char *get_file_name(const char* filepath)
 {
     char *fname, *p, *q;
-    int len = strlen(path), flen;
+    int len = strlen(filepath), flen;
 
-    p = q = (char*)(path + len - 1);
-    while(*p != '/' && p >= path) p--;
-    while(*q != '.' && q >= path) q--;
+    p = q = (char*)(filepath + len - 1);
+    while(*p != '/' && p >= filepath) p--;
+    while(*q != '.' && q >= filepath) q--;
     if (p < q) {
         p += 1;
         flen = q - p;
@@ -16,7 +16,7 @@ char *filename(const char* path)
         fname[flen] = 0;
     } else {
         p += 1;
-        flen = len - (p - path);
+        flen = len - (p - filepath);
         fname = (char*)malloc(flen + 1);
         memcpy(fname, p, flen);
         fname[flen] = 0;
@@ -25,16 +25,16 @@ char *filename(const char* path)
     return fname;
 }
 
-char *fileext(const char* path)
+char *get_file_ext(const char* filepath)
 {
     char *fext = NULL, *p;
-    int len = strlen(path), extlen;
+    int len = strlen(filepath), extlen;
 
-    p = (char*)(path + len - 1);
-    while(*p != '.' && p >= path) p--;
-    if (p > path) {
+    p = (char*)(filepath + len - 1);
+    while(*p != '.' && p >= filepath) p--;
+    if (p > filepath) {
         p += 1;
-        extlen = len - (p - path);
+        extlen = len - (p - filepath);
         fext = (char*)malloc(extlen + 1);
         memcpy(fext, p, extlen);
         fext[extlen] = 0;
@@ -43,11 +43,12 @@ char *fileext(const char* path)
     return fext;
 }
 
-int match_ext(const char *ext, const char *extensions)
+int match_ext(const char *file, const char *ext)
 {
-    const char *p = ext, *q = extensions;
+    char *p = get_file_ext(file);
+    const char *q = ext;
 
-    if (!ext)
+    if (!p)
         return 0;
 
     while (*p && *q && *p == *q) {
