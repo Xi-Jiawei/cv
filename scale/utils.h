@@ -19,6 +19,9 @@
 #define CLAMP(x,min,max) MAX(min, MIN(max, x))
 #define CLAMP255(x) MAX(0, MIN(255, x))
 
+#define CLIP4095(x) CLIP(x,0,4095)
+#define CLAMP4095(x) CLAMP(x,0,4095)
+
 #define MKSHORTTAG(a,b) (a | (b << 8))
 #define MKBESHORTTAG(a,b) (b | (a << 8))
 

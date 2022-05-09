@@ -1,15 +1,5 @@
 #include "demosaic.h"
-
-#define ABS(a) (a < 0 ? -(a) : a)
-#define MIN(a,b) (a < b ? a : b)
-#define MAX(a,b) (a > b ? a : b)
-
-#define CLAMP(v, min, max) (v) < min ? min : ((v) > max ? max : (v))
-
-#define CLAMP255(v) (v) < 0 ? 0 : ((v) > 255 ? 255 : (v))
-#define CLIP255(v) (v) < 0 ? 0 : ((v) > 255 ? 255 : (v))
-
-#define CLIP4095(v) CLAMP(v, 0, 4095)
+#include "utils.h"
 
 static uint8_t *padding_matrix(uint8_t *src, int width, int height, int samples_per_pixel, int pad)
 {
@@ -973,13 +963,14 @@ int demosaicing_gradiant_bggr(uint8_t *dst, uint8_t *src, int width, int height)
 }
 
 // gradiant-based demosaicing. pattern: 'gbrg'
-int demosaicing_gradiant_gbrg_16bit(uint16_t *dst, uint16_t *src, int width, int height)
+int demosaicing_gradiant_gbrg_16bit(uint16_t *dst, uint16_t *src, int width, int height, int sample_bits)
 {
     int i, j, x, y, dst_y, dst_x, pos, ret;
     int padding, width_padding, height_padding;
     uint16_t *src_padding, *dst_padding;
     int8_t *weights, *w;
     uint16_t *p, *q;
+    int val, max_val = (1 << sample_bits) - 1;
 
     padding = 2;
     width_padding = width + padding * 2;
@@ -1045,37 +1036,51 @@ int demosaicing_gradiant_gbrg_16bit(uint16_t *dst, uint16_t *src, int width, int
             // g b
             // r g
 
-            // g0
+            /// g0
             dst_x = i;
             dst_y = j;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y));
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y));
+            // r @ g0
+            val = (SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ g0
+            val = (SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // b
+            /// b
             dst_x = i + 1;
             dst_y = j;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y));
+            // r @ b
+            val = (SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ b
             p[(width * dst_y + dst_x) * 3 + 2] = SRC(x, y);
 
-            // r
+            /// r
             dst_x = i;
             dst_y = j + 1;
             x = dst_x + padding;
             y = dst_y + padding;
+            // r @ r
             p[(width * dst_y + dst_x) * 3] = SRC(x, y);
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y));
+            // b @ r
+            val = (SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // g1
+            /// g1
             dst_x = i + 1;
             dst_y = j + 1;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y));
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y));
+            // r @ g1
+            val = (SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ g1
+            val = (SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
         }
     }
 
@@ -1083,13 +1088,14 @@ int demosaicing_gradiant_gbrg_16bit(uint16_t *dst, uint16_t *src, int width, int
 }
 
 // gradiant-based demosaicing. pattern: 'grbg'
-int demosaicing_gradiant_grbg_16bit(uint16_t *dst, uint16_t *src, int width, int height)
+int demosaicing_gradiant_grbg_16bit(uint16_t *dst, uint16_t *src, int width, int height, int sample_bits)
 {
     int i, j, x, y, dst_y, dst_x, pos, ret;
     int padding, width_padding, height_padding;
     uint16_t *src_padding, *dst_padding;
     int8_t *weights, *w;
     uint16_t *p, *q;
+    int val, max_val = (1 << sample_bits) - 1;
 
     padding = 2;
     width_padding = width + padding * 2;
@@ -1155,37 +1161,51 @@ int demosaicing_gradiant_grbg_16bit(uint16_t *dst, uint16_t *src, int width, int
             // g r
             // b g
 
-            // g0
+            /// g0
             dst_x = i;
             dst_y = j;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y));
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y));
+            // r @ g0
+            val = (SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ g0
+            val = (SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // r
+            /// r
             dst_x = i + 1;
             dst_y = j;
             x = dst_x + padding;
             y = dst_y + padding;
+            // r @ r
             p[(width * dst_y + dst_x) * 3] = SRC(x, y);
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y));
+            val = (SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y);
+            // b @ r
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // b
+            /// b
             dst_x = i;
             dst_y = j + 1;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y));
+            // r @ b
+            val = (SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ b
             p[(width * dst_y + dst_x) * 3 + 2] = SRC(x, y);
 
-            // g1
+            /// g1
             dst_x = i + 1;
             dst_y = j + 1;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y));
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y));
+            // r @ g1
+            val = (SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ g1
+            val = (SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
         }
     }
 
@@ -1193,13 +1213,14 @@ int demosaicing_gradiant_grbg_16bit(uint16_t *dst, uint16_t *src, int width, int
 }
 
 // gradiant-based demosaicing. pattern: 'rggb'
-int demosaicing_gradiant_rggb_16bit(uint16_t *dst, uint16_t *src, int width, int height)
+int demosaicing_gradiant_rggb_16bit(uint16_t *dst, uint16_t *src, int width, int height, int sample_bits)
 {
     int i, j, x, y, dst_y, dst_x, pos, ret;
     int padding, width_padding, height_padding;
     uint16_t *src_padding, *dst_padding;
     int8_t *weights;
     uint16_t *p, *q;
+    int val, max_val = (1 << sample_bits) - 1;
 
     padding = 2;
     width_padding = width + padding * 2;
@@ -1265,36 +1286,50 @@ int demosaicing_gradiant_rggb_16bit(uint16_t *dst, uint16_t *src, int width, int
             // r g
             // g b
 
-            // r
+            /// r
             dst_x = i;
             dst_y = j;
             x = dst_x + padding;
             y = dst_y + padding;
+            // r @ r
             p[(width * dst_y + dst_x) * 3] = SRC(x, y);
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y));
+            val = (SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y);
+            // b @ r
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // g0
+            /// g0
             dst_x = i + 1;
             dst_y = j;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y));
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y));
+            // r @ g0
+            val = (SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ g0
+            val = (SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // g1
+            /// g1
             dst_x = i;
             dst_y = j + 1;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y));
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y));
+            // r @ g1
+            val = (SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ g1
+            val = (SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // b
+            /// b
             dst_x = i + 1;
             dst_y = j + 1;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y));
+            // r @ b
+            val = (SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ b
             p[(width * dst_y + dst_x) * 3 + 2] = SRC(x, y);
         }
     }
@@ -1303,13 +1338,14 @@ int demosaicing_gradiant_rggb_16bit(uint16_t *dst, uint16_t *src, int width, int
 }
 
 // gradiant-based demosaicing. pattern: 'rggb'
-int demosaicing_gradiant_bggr_16bit(uint16_t *dst, uint16_t *src, int width, int height)
+int demosaicing_gradiant_bggr_16bit(uint16_t *dst, uint16_t *src, int width, int height, int sample_bits)
 {
     int i, j, x, y, dst_y, dst_x, pos, ret;
     int padding, width_padding, height_padding;
     uint16_t *src_padding, *dst_padding;
     int8_t *weights;
     uint16_t *p, *q;
+    int val, max_val = (1 << sample_bits) - 1;
 
     padding = 2;
     width_padding = width + padding * 2;
@@ -1375,37 +1411,51 @@ int demosaicing_gradiant_bggr_16bit(uint16_t *dst, uint16_t *src, int width, int
             // b g
             // g r
 
-            // b
+            /// b
             dst_x = i;
             dst_y = j;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y));
+            // r @ b
+            val = (SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ b
             p[(width * dst_y + dst_x) * 3 + 2] = SRC(x, y);
 
-            // g0
+            /// g0
             dst_x = i + 1;
             dst_y = j;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y));
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y));
+            // r @ g0
+            val = (SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ g0
+            val = (SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // g1
+            /// g1
             dst_x = i;
             dst_y = j + 1;
             x = dst_x + padding;
             y = dst_y + padding;
-            p[(width * dst_y + dst_x) * 3] = CLIP4095((SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y));
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y));
+            // r @ g1
+            val = (SRC(x - 1, y) + SRC(x + 1, y) - DST_G(x - 1, y) - DST_G(x + 1, y)) / (WEIGHT(x - 1, y) + WEIGHT(x + 1, y)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3] = CLIP(val, 0, max_val);
+            // b @ g1
+            val = (SRC(x, y - 1) + SRC(x, y + 1) - DST_G(x, y - 1) - DST_G(x, y + 1)) / (WEIGHT(x, y - 1) + WEIGHT(x, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
 
-            // r
+            /// r
             dst_x = i + 1;
             dst_y = j + 1;
             x = dst_x + padding;
             y = dst_y + padding;
+            // r @ r
             p[(width * dst_y + dst_x) * 3] = SRC(x, y);
-            p[(width * dst_y + dst_x) * 3 + 2] = CLIP4095((SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y));
+            // b @ r
+            val = (SRC(x - 1, y - 1) + SRC(x + 1, y - 1) + SRC(x - 1, y + 1) + SRC(x + 1, y + 1) - DST_G(x - 1, y - 1) - DST_G(x + 1, y - 1) - DST_G(x - 1, y + 1) - DST_G(x + 1, y + 1)) / (WEIGHT(x - 1, y - 1) + WEIGHT(x + 1, y - 1) + WEIGHT(x - 1, y + 1) + WEIGHT(x + 1, y + 1)) + DST_G(x, y);
+            p[(width * dst_y + dst_x) * 3 + 2] = CLIP(val, 0, max_val);
         }
     }
 
@@ -1748,19 +1798,19 @@ int demosaicing(uint8_t **dst, uint8_t *src, int width, int height, int sample_b
         } else if (cfa_pattern == 0x00010102) { // bggr
             demosaicing_gradiant_bggr(*dst, src, width, height);
         }
-    } else if (sample_bits == 16) {
+    } else if (sample_bits == 10 || sample_bits == 12 || sample_bits == 14 || sample_bits == 16) {
         *dst = (uint16_t*)malloc(linebytes * height * sizeof(uint16_t));
         // calculate all g
         if (cfa_pattern == 0x01000201) { // gbrg
-            demosaicing_gradiant_gbrg_16bit(*dst, src, width, height);
+            demosaicing_gradiant_gbrg_16bit(*dst, src, width, height, sample_bits);
         } else if (cfa_pattern == 0x01020001) { // grbg
-            demosaicing_gradiant_grbg_16bit(*dst, src, width, height);
+            demosaicing_gradiant_grbg_16bit(*dst, src, width, height, sample_bits);
         } else if (cfa_pattern == 0x02010100) { // rggb
-            demosaicing_gradiant_rggb_16bit(*dst, src, width, height);
+            demosaicing_gradiant_rggb_16bit(*dst, src, width, height, sample_bits);
         } else if (cfa_pattern == 0x00010102) { // bggr
-            demosaicing_gradiant_bggr_16bit(*dst, src, width, height);
+            demosaicing_gradiant_bggr_16bit(*dst, src, width, height, sample_bits);
         }
-    } else if (sample_bits == 32) {
+    } else if (sample_bits == 24 || sample_bits == 32) {
     } else if (sample_bits == 64) {
     }
 

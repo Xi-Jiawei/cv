@@ -65,13 +65,13 @@ int scale_bayer_direct_bilinear_rggb(uint8_t *dst, int dst_width, int dst_height
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP255(vg / wg);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP255(vb / wb);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP255(vr / wr);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
@@ -130,13 +130,13 @@ int scale_bayer_direct_bilinear_gbrg(uint8_t *dst, int dst_width, int dst_height
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP255(vg / wg);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP255(vb / wb);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP255(vr / wr);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
@@ -195,13 +195,13 @@ int scale_bayer_direct_bilinear_bggr(uint8_t *dst, int dst_width, int dst_height
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ !(i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP255(vg / wg);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP255(vb / wb);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP255(vr / wr);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
@@ -260,25 +260,26 @@ int scale_bayer_direct_bilinear_grbg(uint8_t *dst, int dst_width, int dst_height
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP255(vg / wg);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP255(vb / wb);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP255(vr / wr);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bilinear_rggb_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height)
+int scale_bayer_direct_bilinear_rggb_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint16_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -325,25 +326,26 @@ int scale_bayer_direct_bilinear_rggb_16bit(uint16_t *dst, int dst_width, int dst
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bilinear_gbrg_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height)
+int scale_bayer_direct_bilinear_gbrg_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint16_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -390,25 +392,26 @@ int scale_bayer_direct_bilinear_gbrg_16bit(uint16_t *dst, int dst_width, int dst
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bilinear_bggr_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height)
+int scale_bayer_direct_bilinear_bggr_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint16_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -455,25 +458,26 @@ int scale_bayer_direct_bilinear_bggr_16bit(uint16_t *dst, int dst_width, int dst
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ !(i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bilinear_grbg_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height)
+int scale_bayer_direct_bilinear_grbg_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint16_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -520,25 +524,26 @@ int scale_bayer_direct_bilinear_grbg_16bit(uint16_t *dst, int dst_width, int dst
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bilinear_rggb_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height)
+int scale_bayer_direct_bilinear_rggb_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint32_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -585,25 +590,26 @@ int scale_bayer_direct_bilinear_rggb_32bit(uint32_t *dst, int dst_width, int dst
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bilinear_gbrg_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height)
+int scale_bayer_direct_bilinear_gbrg_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint32_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -650,25 +656,26 @@ int scale_bayer_direct_bilinear_gbrg_32bit(uint32_t *dst, int dst_width, int dst
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bilinear_bggr_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height)
+int scale_bayer_direct_bilinear_bggr_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint32_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -715,25 +722,26 @@ int scale_bayer_direct_bilinear_bggr_32bit(uint32_t *dst, int dst_width, int dst
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ !(i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bilinear_grbg_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height)
+int scale_bayer_direct_bilinear_grbg_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint32_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -780,13 +788,13 @@ int scale_bayer_direct_bilinear_grbg_32bit(uint32_t *dst, int dst_width, int dst
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
@@ -808,24 +816,24 @@ int scale_bayer_direct_bilinear(uint8_t **dst, int dst_width, int dst_height, ui
     } else if (sample_bits == 16) {
         *dst = (uint16_t*)malloc(dst_width * dst_height * sizeof(uint16_t));
         if (cfa_pattern == 0x01000201) { // gbrg
-            scale_bayer_direct_bilinear_gbrg_16bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bilinear_gbrg_16bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x01020001) { // grbg
-            scale_bayer_direct_bilinear_grbg_16bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bilinear_grbg_16bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x02010100) { // rggb
-            scale_bayer_direct_bilinear_rggb_16bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bilinear_rggb_16bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x00010102) { // bggr
-            scale_bayer_direct_bilinear_bggr_16bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bilinear_bggr_16bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         }
     } else if (sample_bits == 32) {
         *dst = (uint32_t*)malloc(dst_width * dst_height * sizeof(uint32_t));
         if (cfa_pattern == 0x01000201) { // gbrg
-            scale_bayer_direct_bilinear_gbrg_32bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bilinear_gbrg_32bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x01020001) { // grbg
-            scale_bayer_direct_bilinear_grbg_32bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bilinear_grbg_32bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x02010100) { // rggb
-            scale_bayer_direct_bilinear_rggb_32bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bilinear_rggb_32bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x00010102) { // bggr
-            scale_bayer_direct_bilinear_bggr_32bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bilinear_bggr_32bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         }
     }
 }
@@ -836,6 +844,15 @@ float bayer_cubic(float x)
         return x * x * x / 32 - x * x / 8 + 1.0 / 3;
     else if (x > 2 && x <= 4)
         return (4 - x) * (4 - x) * (4 - x) / 96;
+    else return 0;
+}
+float bayer_cubic2(float x)
+{
+    x = x < 0 ? -x : x;
+    if (x >= 0 && x <= 2)
+        return 3 * x * x * x / 32 - 5 * x * x / 16 + 0.5;
+    else if (x > 2 && x <= 4)
+        return -x * x * x / 32 + 5 * x * x / 16 - x + 1;
     else return 0;
 }
 int scale_bayer_direct_bicubic_rggb(uint8_t *dst, int dst_width, int dst_height, uint8_t *src, int src_width, int src_height)
@@ -863,8 +880,10 @@ int scale_bayer_direct_bicubic_rggb(uint8_t *dst, int dst_width, int dst_height,
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // r
@@ -891,13 +910,13 @@ int scale_bayer_direct_bicubic_rggb(uint8_t *dst, int dst_width, int dst_height,
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP255(vg / wg);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP255(vb / wb);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP255(vr / wr);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
@@ -928,8 +947,10 @@ int scale_bayer_direct_bicubic_gbrg(uint8_t *dst, int dst_width, int dst_height,
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // g
@@ -956,13 +977,13 @@ int scale_bayer_direct_bicubic_gbrg(uint8_t *dst, int dst_width, int dst_height,
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP255(vg / wg);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP255(vb / wb);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP255(vr / wr);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
@@ -993,8 +1014,10 @@ int scale_bayer_direct_bicubic_bggr(uint8_t *dst, int dst_width, int dst_height,
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // b
@@ -1021,13 +1044,13 @@ int scale_bayer_direct_bicubic_bggr(uint8_t *dst, int dst_width, int dst_height,
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ !(i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP255(vg / wg);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP255(vb / wb);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP255(vr / wr);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
@@ -1058,8 +1081,10 @@ int scale_bayer_direct_bicubic_grbg(uint8_t *dst, int dst_width, int dst_height,
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // g
@@ -1086,25 +1111,26 @@ int scale_bayer_direct_bicubic_grbg(uint8_t *dst, int dst_width, int dst_height,
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP255(vg / wg);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP255(vb / wb);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP255(vr / wr);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bicubic_rggb_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height)
+int scale_bayer_direct_bicubic_rggb_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint16_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -1123,8 +1149,10 @@ int scale_bayer_direct_bicubic_rggb_16bit(uint16_t *dst, int dst_width, int dst_
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // r
@@ -1151,25 +1179,26 @@ int scale_bayer_direct_bicubic_rggb_16bit(uint16_t *dst, int dst_width, int dst_
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bicubic_gbrg_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height)
+int scale_bayer_direct_bicubic_gbrg_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint16_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -1188,8 +1217,10 @@ int scale_bayer_direct_bicubic_gbrg_16bit(uint16_t *dst, int dst_width, int dst_
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // g
@@ -1216,25 +1247,26 @@ int scale_bayer_direct_bicubic_gbrg_16bit(uint16_t *dst, int dst_width, int dst_
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bicubic_bggr_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height)
+int scale_bayer_direct_bicubic_bggr_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint16_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -1253,8 +1285,10 @@ int scale_bayer_direct_bicubic_bggr_16bit(uint16_t *dst, int dst_width, int dst_
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // b
@@ -1281,25 +1315,26 @@ int scale_bayer_direct_bicubic_bggr_16bit(uint16_t *dst, int dst_width, int dst_
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ !(i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bicubic_grbg_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height)
+int scale_bayer_direct_bicubic_grbg_16bit(uint16_t *dst, int dst_width, int dst_height, uint16_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint16_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -1318,8 +1353,10 @@ int scale_bayer_direct_bicubic_grbg_16bit(uint16_t *dst, int dst_width, int dst_
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // g
@@ -1346,25 +1383,26 @@ int scale_bayer_direct_bicubic_grbg_16bit(uint16_t *dst, int dst_width, int dst_
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bicubic_rggb_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height)
+int scale_bayer_direct_bicubic_rggb_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint32_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -1383,8 +1421,10 @@ int scale_bayer_direct_bicubic_rggb_32bit(uint32_t *dst, int dst_width, int dst_
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // r
@@ -1411,25 +1451,26 @@ int scale_bayer_direct_bicubic_rggb_32bit(uint32_t *dst, int dst_width, int dst_
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bicubic_gbrg_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height)
+int scale_bayer_direct_bicubic_gbrg_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint32_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -1448,8 +1489,10 @@ int scale_bayer_direct_bicubic_gbrg_32bit(uint32_t *dst, int dst_width, int dst_
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // g
@@ -1476,25 +1519,26 @@ int scale_bayer_direct_bicubic_gbrg_32bit(uint32_t *dst, int dst_width, int dst_
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && (i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bicubic_bggr_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height)
+int scale_bayer_direct_bicubic_bggr_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint32_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -1513,8 +1557,10 @@ int scale_bayer_direct_bicubic_bggr_32bit(uint32_t *dst, int dst_width, int dst_
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // b
@@ -1541,25 +1587,26 @@ int scale_bayer_direct_bicubic_bggr_32bit(uint32_t *dst, int dst_width, int dst_
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ !(i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if (!(j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
     }
 }
-int scale_bayer_direct_bicubic_grbg_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height)
+int scale_bayer_direct_bicubic_grbg_32bit(uint32_t *dst, int dst_width, int dst_height, uint32_t *src, int src_width, int src_height, int sample_bits)
 {
     int i, j, k, r, s, ret;
     float x, y, x_adj, y_adj;
     int x_int, y_int, src_x, src_y;
     float vr, vg, vb, wx, wy, wr, wg, wb;
     uint32_t *p;
+    int max_val = (1 << sample_bits) - 1;
 
     p = dst;
     for (j = 0; j < dst_height; ++j) {
@@ -1578,8 +1625,10 @@ int scale_bayer_direct_bicubic_grbg_32bit(uint32_t *dst, int dst_width, int dst_
                     src_x = x_int + r;
                     src_y = y_int + s;
                     if (src_x < 0 || src_x >= src_width || src_y < 0 || src_y >= src_height) continue;
-                    wx = bayer_cubic(src_x - x);
-                    wy = bayer_cubic(src_y - y);
+                    //wx = bayer_cubic(src_x - x);
+                    //wy = bayer_cubic(src_y - y);
+                    wx = bayer_cubic2(src_x - x);
+                    wy = bayer_cubic2(src_y - y);
 
                     if (!(src_y & 1)) {
                         if (!(src_x & 1)) { // g
@@ -1606,13 +1655,13 @@ int scale_bayer_direct_bicubic_grbg_32bit(uint32_t *dst, int dst_width, int dst_
             }
             //fprintf(stdout, "vr: %.2f, vg: %.2f, vb: %.2f, wr: %.2f, wg: %.2f, wb: %.2f\n", vr, vg, vb, wr, wg, wb);
             if (!((j & 1) ^ (i & 1))) { // g
-                p[dst_width * j + i] = vg / wg;
+                p[dst_width * j + i] = CLIP(vg / wg, 0, max_val);
                 //fprintf(stdout, "g[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else if ((j & 1) && !(i & 1)) { // b
-                p[dst_width * j + i] = vb / wb;
+                p[dst_width * j + i] = CLIP(vb / wb, 0, max_val);
                 //fprintf(stdout, "b[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             } else {
-                p[dst_width * j + i] = vr / wr;
+                p[dst_width * j + i] = CLIP(vr / wr, 0, max_val);
                 //fprintf(stdout, "r[%d, %d]: %d\n", i, j, p[dst_width * j + i]);
             }
         }
@@ -1631,27 +1680,27 @@ int scale_bayer_direct_bicubic(uint8_t **dst, int dst_width, int dst_height, uin
         } else if (cfa_pattern == 0x00010102) { // bggr
             scale_bayer_direct_bicubic_bggr(*dst, dst_width, dst_height, src, src_width, src_height);
         }
-    } else if (sample_bits == 16) {
+    } else if (sample_bits == 10 || sample_bits == 12 || sample_bits == 14 || sample_bits == 16) {
         *dst = (uint16_t*)malloc(dst_width * dst_height * sizeof(uint16_t));
         if (cfa_pattern == 0x01000201) { // gbrg
-            scale_bayer_direct_bicubic_gbrg_16bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bicubic_gbrg_16bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x01020001) { // grbg
-            scale_bayer_direct_bicubic_grbg_16bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bicubic_grbg_16bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x02010100) { // rggb
-            scale_bayer_direct_bicubic_rggb_16bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bicubic_rggb_16bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x00010102) { // bggr
-            scale_bayer_direct_bicubic_bggr_16bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bicubic_bggr_16bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         }
-    } else if (sample_bits == 32) {
+    } else if (sample_bits == 24 || sample_bits == 32) {
         *dst = (uint32_t*)malloc(dst_width * dst_height * sizeof(uint32_t));
         if (cfa_pattern == 0x01000201) { // gbrg
-            scale_bayer_direct_bicubic_gbrg_32bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bicubic_gbrg_32bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x01020001) { // grbg
-            scale_bayer_direct_bicubic_grbg_32bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bicubic_grbg_32bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x02010100) { // rggb
-            scale_bayer_direct_bicubic_rggb_32bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bicubic_rggb_32bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         } else if (cfa_pattern == 0x00010102) { // bggr
-            scale_bayer_direct_bicubic_bggr_32bit(*dst, dst_width, dst_height, src, src_width, src_height);
+            scale_bayer_direct_bicubic_bggr_32bit(*dst, dst_width, dst_height, src, src_width, src_height, sample_bits);
         }
     }
 }
@@ -1695,17 +1744,33 @@ int scale_bayer_deb(uint8_t **dst, int dst_width, int dst_height, uint8_t *src, 
     uint8_t *rgb, *scaled_rgb;
 
     demosaicing(&rgb, src, src_width, src_height, sample_bits, cfa_pattern);
-    //uint8_t *rgb_bit8;
-    //TIFFContext *c;
-    //convert_decrease_12bit_to_8bit(&rgb_bit8, rgb, src_width * src_height * 3);
-    //init_tiff_ctx(&c, rgb_bit8, src_width, src_height, 24, 3, 2);
-    //write_tiff(c, "rgb.tif");
+    #if DEBUG_MODE
+    uint8_t *rgb_bit8;
+    TIFFContext *c;
+    if (sample_bits == 8) rgb_bit8 = rgb;
+    //else if (sample_bits == 10) convert_decrease_10bit_to_8bit(&rgb_bit8, rgb, src_width * src_height * 3);
+    else if (sample_bits == 12) convert_decrease_12bit_to_8bit(&rgb_bit8, rgb, src_width * src_height * 3);
+    //else if (sample_bits == 14) convert_decrease_14bit_to_8bit(&rgb_bit8, rgb, src_width * src_height * 3);
+    else rgb_bit8 = rgb;
+    init_tiff_ctx(&c, rgb_bit8, src_width, src_height, 24, 3, 2);
+    write_tiff(c, "rgb.tif");
     //bmp_write("rgb.bmp", rgb_bit8, src_width, src_height, 24);
+    #endif
 
-    scale(&scaled_rgb, dst_width, dst_height, rgb, src_width, src_height, sample_bits, 1);
+    scale(&scaled_rgb, dst_width, dst_height, rgb, src_width, src_height, sample_bits, 0, 1);
+    #if DEBUG_MODE
+    uint8_t *scaled_rgb_bit8;
+    if (sample_bits == 8) scaled_rgb_bit8 = scaled_rgb;
+    //else if (sample_bits == 10) convert_decrease_10bit_to_8bit(&scaled_rgb_bit8, scaled_rgb, dst_width * dst_height * 3);
+    else if (sample_bits == 12) convert_decrease_12bit_to_8bit(&scaled_rgb_bit8, scaled_rgb, dst_width * dst_height * 3);
+    //else if (sample_bits == 14) convert_decrease_14bit_to_8bit(&scaled_rgb_bit8, scaled_rgb, dst_width * dst_height * 3);
+    else scaled_rgb_bit8 = scaled_rgb;
+    init_tiff_ctx(&c, scaled_rgb_bit8, dst_width, dst_height, 24, 3, 2);
+    write_tiff(c, "scaled_rgb.tif");
     //bmp_write("scaled_rgb.bmp", scaled_rgb, dst_width, dst_height, 24);
+    #endif
 
-    create_cfa(dst, scaled_rgb, dst_width, dst_height, sample_bits, cfa_pattern);
+    create_cfa(dst, scaled_rgb, dst_width, dst_height, (sample_bits + 7) / 8 * 8, cfa_pattern);
 }
 
 int scale_bayer(uint8_t **dst, int dst_width, int dst_height, uint8_t *src, int src_width, int src_height, int sample_bits, int cfa_pattern)
@@ -1716,6 +1781,7 @@ int scale_bayer(uint8_t **dst, int dst_width, int dst_height, uint8_t *src, int 
     float vr, vg, vb, wx, wy, wr, wg, wb;
 
     if (sample_bits == 8) {
+        //scale_bayer_dir(dst, dst_width, dst_height, src, src_width, src_height, 8, cfa_pattern);
         scale_bayer_deb(dst, dst_width, dst_height, src, src_width, src_height, 8, cfa_pattern);
     } else if (sample_bits == 10 || sample_bits == 12 || sample_bits == 14 || sample_bits == 16) {
         uint16_t *src_bit16, *dst_bit16;
@@ -1724,8 +1790,8 @@ int scale_bayer(uint8_t **dst, int dst_width, int dst_height, uint8_t *src, int 
         else if (sample_bits == 14) convert_14bit_to_16bit(&src_bit16, src, src_width, src_height);
         else src_bit16 = (uint16_t*)src;
 
-        //scale_bayer_dir(&dst_bit16, dst_width, dst_height, src_bit16, src_width, src_height, 16, cfa_pattern);
-        scale_bayer_deb(&dst_bit16, dst_width, dst_height, src_bit16, src_width, src_height, 16, cfa_pattern);
+        //scale_bayer_dir(&dst_bit16, dst_width, dst_height, src_bit16, src_width, src_height, sample_bits, cfa_pattern);
+        scale_bayer_deb(&dst_bit16, dst_width, dst_height, src_bit16, src_width, src_height, sample_bits, cfa_pattern);
 
         #if DEBUG_MODE
         int fd;
@@ -1749,7 +1815,7 @@ int scale_bayer(uint8_t **dst, int dst_width, int dst_height, uint8_t *src, int 
         if (sample_bits == 24) convert_24bit_to_32bit(&src_bit32, src, src_width, src_height);
         else src_bit32 = (uint32_t*)src;
         
-        scale_bayer_deb(&dst_bit32, dst_width, dst_height, src_bit32, src_width, src_height, 32, cfa_pattern);
+        scale_bayer_deb(&dst_bit32, dst_width, dst_height, src_bit32, src_width, src_height, sample_bits, cfa_pattern);
 
         if (sample_bits == 24) convert_32bit_to_24bit(dst, dst_bit32, src_width, src_height);
         else *dst = (uint8_t*)dst_bit32;
